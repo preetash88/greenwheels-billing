@@ -1,0 +1,6 @@
+{
+  "invoice_id": "INV-DRIVER-001-0003",
+  "payment_reference": "PAY-NEG-002",
+  "amount": 3500,
+  "currency": "USD"
+}

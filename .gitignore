@@ -1,0 +1,56 @@
+# Python virtual environment
+.venv/
+venv/
+env/
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# uv
+.python-version
+
+# Test output
+.behave/
+*.log
+
+# Newman reports
+newman/
+
+# Environment files with real secrets
+*.env
+.env
+
+# Docker
+.docker/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node modules
+node_modules/
+
+# Pytest cache
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Manual test payloads used during development — not part of submission
+cycle_driver4_week1.json
+cycle_driver4_week2.json
+cycle_driver4_week3.json
+cycle_week3.json
+cycle_week4.json
+discount_10.json
+pay.json
+pay_week3.json
+run_all_tests.ps1

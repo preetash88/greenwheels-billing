@@ -1,0 +1,127 @@
+name: Greenwheels QA Pipeline
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+
+jobs:
+  api-tests:
+    name: Run API Tests Against Stub
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start stub service
+        run: docker-compose -f stub/docker-compose.yml up -d --build
+        # -d means detached — runs in background so the next steps can run
+
+      - name: Wait for stub to be healthy
+        run: |
+          echo "Waiting for stub service to be ready..."
+          for i in $(seq 1 12); do
+            if curl -sf --max-time 5 http://localhost:8000/health; then
+              echo ""
+              echo "Stub is ready."
+              exit 0
+            fi
+            echo "Attempt $i/12 — not ready yet, waiting 5 seconds..."
+            sleep 5
+          done
+          echo "Stub did not become healthy within 60 seconds."
+          docker-compose -f stub/docker-compose.yml logs
+          exit 1
+        # Tries every 5 seconds for up to 60 seconds
+        # If stub never responds, prints the container logs so you can debug
+        # then fails the pipeline
+
+      - name: Reset stub seed data
+        run: |
+          curl -sf -X POST http://localhost:8000/test/reset
+          echo "Seed data reset successfully."
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Run Newman collection
+        run: |
+          newman run stub/postman/collection.json \
+            --environment stub/postman/env.json \
+            --reporters cli \
+            --reporter-cli-no-banner \
+            --timeout-request 5000
+        # --timeout-request 5000 = fail if any request takes more than 5 seconds
+        # This satisfies the PDF requirement: "fail if stub does not respond within 5 seconds"
+
+      - name: Print stub logs on failure
+        if: failure()
+        run: docker-compose -f stub/docker-compose.yml logs
+        # Only runs if a previous step failed
+        # Prints container logs so you can see what went wrong
+
+      - name: Stop stub service
+        if: always()
+        run: docker-compose -f stub/docker-compose.yml down
+        # always() means this runs even if tests failed
+        # Clean up the container regardless of outcome
+
+  bdd-tests:
+    name: Run BDD Tests Against Stub
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: api-tests
+    # Only runs if api-tests job passed
+
+    steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Start stub service
+        run: docker-compose -f stub/docker-compose.yml up -d --build
+
+      - name: Wait for stub to be healthy
+        run: |
+          for i in $(seq 1 12); do
+            if curl -sf --max-time 5 http://localhost:8000/health; then
+              echo ""
+              echo "Stub is ready."
+              exit 0
+            fi
+            echo "Attempt $i/12 — not ready yet, waiting 5 seconds..."
+            sleep 5
+          done
+          echo "Stub did not become healthy within 60 seconds."
+          docker-compose -f stub/docker-compose.yml logs
+          exit 1
+
+      - name: Install BDD dependencies
+        run: pip install behave requests
+
+      - name: Reset stub seed data
+        run: curl -sf -X POST http://localhost:8000/test/reset
+
+      - name: Run Behave BDD tests
+        run: behave stub/features/
+        # Runs all feature files
+
+      - name: Print stub logs on failure
+        if: failure()
+        run: docker-compose -f stub/docker-compose.yml logs
+
+      - name: Stop stub service
+        if: always()
+        run: docker-compose -f stub/docker-compose.yml down
