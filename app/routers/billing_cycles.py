@@ -20,8 +20,12 @@ def creat_billing_cycle(request: CreateCycleRequest) -> CycleResponse:
 
         # 2. Business Rule 1: lease must be active
         lease_status = store.leases[request.driver_id]
-        if lease_status in (LeaseStatus.paused, LeaseStatus.terminated):
+        if lease_status == LeaseStatus.paused:
             raise HTTPException(status_code=409, detail=f"cannot create billing cycle — lease is {lease_status.value}")
+
+        # Bug 2 added: A paused lease correctly returns 409. But a terminated lease returns 404 instead of 409. The system correctly blocks the billing cycle — the detail message even says “lease is terminated” — but the status code says “not found”. Any client checking the status code to decide what to do next will misread this as “driver does not exist” and handle it completely wrong.
+        if lease_status == LeaseStatus.terminated:
+            raise HTTPException(status_code=404, detail=f"cannot create billing cycle — lease is {lease_status.value}")
 
         # 3. Cannot bill the same driver for the same week twice
         already_billed = any(

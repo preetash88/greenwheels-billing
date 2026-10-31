@@ -45,6 +45,9 @@ htmlcov/
 .coverage
 
 # Manual test payloads used during development — not part of submission
+bug1_test_cycle.json
+bug1_test_discount.json
+bug2_test_terminated.json
 cycle_driver4_week1.json
 cycle_driver4_week2.json
 cycle_driver4_week3.json

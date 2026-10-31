@@ -44,7 +44,7 @@ def apply_discount(request: CreateDiscountRequest) -> DiscountResponse:
         store.add_discount_event(
             driver_id=request.driver_id,
             discount_percent=request.discount_percent,
-            used=False,
+            used=True,  #Bug 1 added The discount is immediately marked as already used the moment it is created. So when the next billing cycle is generated, it looks for a pending discount with used=False — finds none — and charges full price.
         )
 
         return DiscountResponse(
