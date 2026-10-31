@@ -3,11 +3,11 @@ name: Greenwheels QA Pipeline
 on:
   pull_request:
     branches:
-      - main
+      - master
       - develop
   push:
     branches:
-      - main
+      - master
 
 jobs:
   api-tests:
